@@ -1,6 +1,12 @@
 import os
+import glob
+import rawpy
+import cv2
+import numpy as np
+import shutil
 from skimage import feature
 from skimage import color
+from PIL import Image
 
 def convert_arw_to_png(arw_folder, png_folder):
     arw_files = glob.glob(os.path.join(arw_folder, "*.ARW"))
@@ -11,15 +17,6 @@ def convert_arw_to_png(arw_folder, png_folder):
             rgb = raw.postprocess()
         png_file = os.path.join(png_folder, os.path.splitext(os.path.basename(arw_file))[0] + '.png')
         Image.fromarray(rgb).save(png_file)
-
-
-arw_folder = r'C:\Users\rober\Pictures\mar 21\purple !!!'
-png_folder = r'C:\Users\rober\Pictures\mar 21\purple !!!\png/'
-
-convert_arw_to_png(arw_folder, png_folder)
-
-png_folder = r'C:\Users\rober\Pictures\mar 21\purple !!!\png\\'
-preprocessed_folder = r'C:\Users\rober\Pictures\mar 21\purple !!!\preprocessed\\'
 
 def preprocess_images(png_folder, preprocessed_folder):
     png_files = glob.glob(os.path.join(png_folder, "*.png"))
@@ -37,9 +34,6 @@ def preprocess_images(png_folder, preprocessed_folder):
         # Save the preprocessed images
         preprocessed_file = os.path.join(preprocessed_folder, os.path.basename(png_file))
         cv2.imwrite(preprocessed_file, img_blurred)
-
-preprocess_images(png_folder, preprocessed_folder)
-
 
 def extract_features(preprocessed_folder, save_folder):
     preprocessed_files = glob.glob(os.path.join(preprocessed_folder, "*.png"))
@@ -86,56 +80,56 @@ def extract_features(preprocessed_folder, save_folder):
         if i == 0:
             global features_array
             features_array = np.empty((len(preprocessed_files), num_features))
-            
+                
         features_array[i] = combined_features
-        
+            
     return features_array
 
 
+def main():
+    arw_folder = r'C:/Users/rober/Pictures/mar 21/purple !!!'
+    png_folder = r'C:/Users/rober/Pictures/mar 21/purple !!!/png/'
 
+    convert_arw_to_png(arw_folder, png_folder)
 
-# Get the current working directory
-current_dir = os.getcwd()
+    preprocessed_folder = r'C:/Users/rober/Pictures/mar 21/purple !!!/preprocessed/'
 
-# Construct the full file path
-file_path = os.path.join(current_dir, "array_preprocess.npy")
+    preprocess_images(png_folder, preprocessed_folder)
 
-# Load the array from the .npy file
-array = np.load(file_path)
-print(f"Features array saved to: {os.path.abspath('array_preprocess.npy')}")
+    save_folder = r'C:/Users/rober/Pictures/mar 21/purple !!!/preprocessed_step2/'
 
+    features_array = extract_features(preprocessed_folder, save_folder)
 
-# Define the source and destination paths
-dst_path = r'C:\Users\rober\Pictures\mar 21\purple !!!\preprocessed_step2\array_preprocess.npy'
+    # Save the features array to an .npy file
+    np.save('array_preprocess.npy', features_array)
 
-# Copy the file
-os.makedirs(os.path.dirname(dst_path), exist_ok=True) # create the destination folder if it does not exist
-os.replace(file_path, dst_path) # replace the file in the destination folder with the new file
+    # Load the array from the .npy file
+    array = np.load('array_preprocess.npy')
+    print(f"Features array saved to: {os.path.abspath('array_preprocess.npy')}")
 
+    # Move the features array .npy file to the save_folder
+    src_path = 'array_preprocess.npy'
+    dst_path = os.path.join(save_folder, 'array_preprocess.npy')
+    os.replace(src_path, dst_path)
 
-# Array looks beautiful doesnt it? Remember, CANNY is up here, which means we can always tweak our canny settings, as well as everything else, this is like the fine tuning engine right here. 
+    # Move the grayscale blurred images to a separate folder
+    source_folder = r'C:/Users/rober/Pictures/mar 21/purple !!!/preprocessed_step2/'
+    destination_folder = r'C:/Users/rober/Pictures/mar 21/purple !!!/preprocessed_step2/gray/'
 
+    # Create the destination folder if it doesn't exist
+    if not os.path.exists(destination_folder):
+        os.makedirs(destination_folder)
 
+    # Loop through all the files in the source folder
+    for filename in os.listdir(source_folder):
+        # Check if the file ends with "_blur.png"
+        if filename.endswith("_blur.png"):
+            # Construct the file paths for the source and destination
+            source_path = os.path.join(source_folder, filename)
+            destination_path = os.path.join(destination_folder, filename)
 
-# this makes the gray folder, and moves all the gray images into it
+            # Move the file from the source folder to the destination folder
+            shutil.move(source_path, destination_path)
 
-import shutil
-
-source_folder = 'C:\\Users\\rober\\Pictures\\mar 21\\purple !!!\\preprocessed_step2\\'
-destination_folder = 'C:\\Users\\rober\\Pictures\\mar 21\\purple !!!\\preprocessed_step2\\gray\\'
-
-# Create the destination folder if it doesn't exist
-if not os.path.exists(destination_folder):
-    os.makedirs(destination_folder)
-
-# Loop through all the files in the source folder
-for filename in os.listdir(source_folder):
-    # Check if the file ends with "_blur.png"
-    if filename.endswith("_blur.png"):
-        # Construct the file paths for the source and destination
-        source_path = os.path.join(source_folder, filename)
-        destination_path = os.path.join(destination_folder, filename)
-
-        # Move the file from the source folder to the destination folder
-        shutil.move(source_path, destination_path)
-
+if __name__ == "__main__":
+    main()
